@@ -12,6 +12,7 @@ import GameKit
 
 // A simple game scene with falling boxes
 class GameScene: SKScene{
+    
     //    var backgroundNode = SKSpriteNode(imageNamed: "images/background.png")
     //
     //    backgroundNode.position = CGPointMake(self.size.width/2, self.size.height/2)
