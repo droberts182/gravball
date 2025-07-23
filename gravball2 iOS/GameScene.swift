@@ -880,37 +880,70 @@ class GameScene: SKScene{
     protocol Command {
         func execute()
     }
-    // Custom initializer with size and game
-        init(size: CGSize, game: Game, gameCenterManager: GameCenterManager) {
-            self.gameCenterManager = gameCenterManager
-            super.init(size: size)
+    // Initializes the game scene with specified size, game instance, and GameCenter manager
+    init(size: CGSize, game: Game, gameCenterManager: GameCenterManager) {
+        // Store the GameCenter manager instance for leaderboard and achievement integration
+        self.gameCenterManager = gameCenterManager
+        
+        // Call the superclass initializer with the provided size
+        super.init(size: size)
+        
+        // Calculate the midpoint of the screen for positioning elements
+        middleScreenPoint = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+        
+        // Set up the central wheel node for gameplay
+        setCenterWheel()
+        
+        // Initialize light-up nodes for visual effects
+        setLightUpNodes()
+        
+        // Configure the background elements of the scene
+        setUpBakcground()
+        
+        // Set up sprite nodes used in the game
+        setUpSprites()
+        
+        // Initialize the angles for rotating elements
+        setCurrentAngles()
+        
+        // Update the level display label
+        updateLevelLabel()
+        
+        // Update the score display label
+        updateScoreLabel()
+        
+        // Initialize the total time display with a starting value of 0
+        updateTimeTotal(currentTime: 0)
+        
+        // Note: Commented out code for particle effects
+        // makeParticle()
+        
+        // Start the countdown sequence for the game
+        doCountdown()
+        
+        // Check if accelerometer is available for device motion input
+        if motionManager.isAccelerometerAvailable {
+            // Set accelerometer update interval to 60 Hz (0.1 seconds)
+            motionManager.accelerometerUpdateInterval = 0.1
             
-            middleScreenPoint = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
-            
-            setCenterWheel()
-            setLightUpNodes()
-            setUpBakcground()
-            setUpSprites()
-            setCurrentAngles()
-           
-            updateLevelLabel()
-            updateScoreLabel()
-            updateTimeTotal(currentTime: 0)
-            //makeParticle()
-            doCountdown()
-            
-            if motionManager.isAccelerometerAvailable {
-                motionManager.accelerometerUpdateInterval = 0.1 // 60 Hz
-                motionManager.startAccelerometerUpdates(to: .main) { [weak self] (data, error) in
-                    guard let self = self, let data = data else { return }
-                    // Low-pass filter for smoothing
-                    let newX = (CGFloat(data.acceleration.y) * self.kFilterFactor) + (self.accelerometerX * (1.0 - self.kFilterFactor))
-                    let newY = (CGFloat(-data.acceleration.x) * self.kFilterFactor) + (self.accelerometerY * (1.0 - self.kFilterFactor))
-                    self.accelerometerX = newX
-                    self.accelerometerY = newY
-                }
+            // Start accelerometer updates on the main queue
+            motionManager.startAccelerometerUpdates(to: .main) { [weak self] (data, error) in
+                // Ensure self and data are available, otherwise exit
+                guard let self = self, let data = data else { return }
+                
+                // Apply low-pass filter to smooth accelerometer data for X-axis
+                let newX = (CGFloat(data.acceleration.y) * self.kFilterFactor) + (self.accelerometerX * (1.0 - self.kFilterFactor))
+                
+                // Apply low-pass filter to smooth accelerometer data for Y-axis
+                let newY = (CGFloat(-data.acceleration.x) * self.kFilterFactor) + (self.accelerometerY * (1.0 - self.kFilterFactor))
+                
+                // Update stored accelerometer values
+                self.accelerometerX = newX
+                self.accelerometerY = newY
             }
         }
+    }
+    
     override init(size: CGSize) {
             super.init(size: size) // Call superclass initializer
         
@@ -973,6 +1006,7 @@ class GameScene: SKScene{
             gameOverFlag = true
         }
     }
+    
     func setRotation()
     {
         centerWheel.zRotation = GameConstants.sphereAngleCurrent * .pi / 180
@@ -985,43 +1019,63 @@ class GameScene: SKScene{
         lightUpPurple.zRotation = GameConstants.sphereAngleCurrent * .pi / 180
     }
     
+    /**
+     * Calculates distances from all wheel segments to a given point ( ball's position)
+     * This is used to determine which wheel segment is closest to the ball for collision detection
+     * @param otherCenter: The position (of a ball) to calculate distances from
+     */
     func setDistance(_ otherCenter: CGPoint)
     {
-         distanceBlue = distanceBetweenTwoPoints(
+        // Calculate distance from blue wheel segment to the given point
+        distanceBlue = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxblue, y: wheelCenter.y + pointyblue),
             endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
         )
-         distanceYellow = distanceBetweenTwoPoints(
+        
+        // Calculate distance from yellow wheel segment to the given point
+        distanceYellow = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxyellow, y: wheelCenter.y + pointyyellow),
             endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
         )
-         distanceRed = distanceBetweenTwoPoints(
+        
+        // Calculate distance from red wheel segment to the given point
+        distanceRed = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxred, y: wheelCenter.y + pointyred),
             endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
         )
-         distanceGreen = distanceBetweenTwoPoints(
+        
+        // Calculate distance from green wheel segment to the given point
+        distanceGreen = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxgreen, y: wheelCenter.y + pointygreen),
             endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
         )
-         distanceAqua = distanceBetweenTwoPoints(
+        
+        // Calculate distance from aqua wheel segment to the given point
+        distanceAqua = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxaqua, y: wheelCenter.y + pointyaqua),
             endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
         )
-         distancePurple = distanceBetweenTwoPoints(
+        
+        // Calculate distance from purple wheel segment to the given point
+        distancePurple = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxpurple, y: wheelCenter.y + pointypurple),
             endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
         )
         
+        // Calculate distance from first dark space segment to the given point
+        // Dark spaces are barrier/empty segments that cause collision failure
         distancedarkspace1 = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxdarkspace1, y: wheelCenter.y + pointydarkspace1),
            endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
        )
         
+        // Calculate distance from second dark space segment to the given point
         distancedarkspace2 = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxdarkspace2, y: wheelCenter.y + pointydarkspace2),
            endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
        )
         
+        // Calculate distance from third dark space segment to the given point
         distancedarkspace3 = distanceBetweenTwoPoints(
             startPoint: CGPoint(x: wheelCenter.x + pointxdarkspace3, y: wheelCenter.y + pointydarkspace3),
            endPoint: CGPoint(x: otherCenter.x, y: otherCenter.y)
@@ -1113,305 +1167,412 @@ class GameScene: SKScene{
         ]
     }
     
-    func determineColor(ballcolor: Int, theball: Ball, i: Int) -> Bool
-    {
-        switch ballcolor
-        {
+    // Determines the color of a ball and triggers corresponding animations and actions
+    func determineColor(ballcolor: Int, theball: Ball, i: Int) -> Bool {
+        // Evaluate the ballcolor parameter against predefined color constants
+        switch ballcolor {
+            // Case for red color
             case GameConstants.RED_CONST:
-            runFadeAnimation(on: lightUpRed)
-            
-            colorsMatch(theball: theball, index: i)
-            
-            return true
-        case GameConstants.YELLOW_CONST:
-            runFadeAnimation(on: lightUpYellow)
-            colorsMatch(theball: theball, index: i)
-            return true
-        case GameConstants.GREEN_CONST:
-            runFadeAnimation(on: lightUpGreen)
-            colorsMatch(theball: theball, index: i)
-            return true
-        case GameConstants.BLUE_CONST:
-            runFadeAnimation(on: lightUpBlue)
-            colorsMatch(theball: theball, index: i)
-            
-            return true
-        case GameConstants.PURPLE_CONST:
-            runFadeAnimation(on: lightUpPurple)
-            colorsMatch(theball: theball, index: i)
-            
-            return true
-        case GameConstants.AQUA_CONST:
-            runFadeAnimation(on: lightUpAqua)
-            colorsMatch(theball: theball, index: i)
-            
-            return true
-        default:
-            runBlackOutAnimation(on: backgroundBlackOut)
-            return false
+                // Run fade animation on the red light-up node
+                runFadeAnimation(on: lightUpRed)
+                // Check if the ball color matches and perform related actions
+                colorsMatch(theball: theball, index: i)
+                // Return true to indicate successful color match
+                return true
+                
+            // Case for yellow color
+            case GameConstants.YELLOW_CONST:
+                // Run fade animation on the yellow light-up node
+                runFadeAnimation(on: lightUpYellow)
+                // Check if the ball color matches and perform related actions
+                colorsMatch(theball: theball, index: i)
+                // Return true to indicate successful color match
+                return true
+                
+            // Case for green color
+            case GameConstants.GREEN_CONST:
+                // Run fade animation on the green light-up node
+                runFadeAnimation(on: lightUpGreen)
+                // Check if the ball color matches and perform related actions
+                colorsMatch(theball: theball, index: i)
+                // Return true to indicate successful color match
+                return true
+                
+            // Case for blue color
+            case GameConstants.BLUE_CONST:
+                // Run fade animation on the blue light-up node
+                runFadeAnimation(on: lightUpBlue)
+                // Check if the ball color matches and perform related actions
+                colorsMatch(theball: theball, index: i)
+                // Return true to indicate successful color match
+                return true
+                
+            // Case for purple color
+            case GameConstants.PURPLE_CONST:
+                // Run fade animation on the purple light-up node
+                runFadeAnimation(on: lightUpPurple)
+                // Check if the ball color matches and perform related actions
+                colorsMatch(theball: theball, index: i)
+                // Return true to indicate successful color match
+                return true
+                
+            // Case for aqua color
+            case GameConstants.AQUA_CONST:
+                // Run fade animation on the aqua light-up node
+                runFadeAnimation(on: lightUpAqua)
+                // Check if the ball color matches and perform related actions
+                colorsMatch(theball: theball, index: i)
+                // Return true to indicate successful color match
+                return true
+                
+            // Default case for unrecognized color
+            default:
+                // Run blackout animation on the background node
+                runBlackOutAnimation(on: backgroundBlackOut)
+                // Return false to indicate no color match
+                return false
         }
     }
     
+    /**
+     * Determines if a ball's color matches the wheel segment and handles collision effects
+     * @param theball: The ball object involved in the collision
+     * @param i: Index parameter (likely for ball position or array index)
+     * @param ballcolor: The color of the ball being checked for collision
+     * @return: Boolean indicating whether the collision was successful (colors matched)
+     */
     func determineCollision(theball: Ball, i: Int, ballcolor: BallColor) -> Bool
     {
         switch ballcolor
         {
+        // Handle collision with red wheel segment
         case .red:
             if(theball.color == GameConstants.RED_CONST)
             {
-                runFadeAnimation(on: lightUpRed)
-                colorsMatch(theball: theball, index: i)
+                // Ball color matches wheel segment - trigger success effects
+                runFadeAnimation(on: lightUpRed)  // Light up red segment
+                colorsMatch(theball: theball, index: i)  // Handle successful match
                 return true
             }
             else{
-                
-                runBlackOutAnimation(on: backgroundBlackOut)
-                //  decreaseScore()
-                
+                // Ball color doesn't match red wheel segment - trigger failure effects
+                runBlackOutAnimation(on: backgroundBlackOut)  // Flash screen black
+                //  decreaseScore()  // TODO: Implement score decrease
             }
+        
+        // Handle collision with blue wheel segment
         case .blue:
             if(theball.color == GameConstants.BLUE_CONST)
             {
-                runFadeAnimation(on: lightUpBlue)
-                colorsMatch(theball: theball, index: i)
+                // Ball color matches wheel segment - trigger success effects
+                runFadeAnimation(on: lightUpBlue)  // Light up blue segment
+                colorsMatch(theball: theball, index: i)  // Handle successful match
                 return true
             }
             else{
-                
-                runBlackOutAnimation(on: backgroundBlackOut)
-                //  decreaseScore()
-                
+                // Ball color doesn't match blue wheel segment - trigger failure effects
+                runBlackOutAnimation(on: backgroundBlackOut)  // Flash screen black
+                //  decreaseScore()  // TODO: Implement score decrease
             }
+        
+        // Handle collision with yellow wheel segment
         case .yellow:
             if(theball.color == GameConstants.YELLOW_CONST)
             {
-                runFadeAnimation(on: lightUpYellow)
-                colorsMatch(theball: theball, index: i)
+                // Ball color matches wheel segment - trigger success effects
+                runFadeAnimation(on: lightUpYellow)  // Light up yellow segment
+                colorsMatch(theball: theball, index: i)  // Handle successful match
                 return true
             }
             else{
-                
-                runBlackOutAnimation(on: backgroundBlackOut)
-                //  decreaseScore()
-                
+                // Ball color doesn't match yellow wheel segment - trigger failure effects
+                runBlackOutAnimation(on: backgroundBlackOut)  // Flash screen black
+                //  decreaseScore()  // TODO: Implement score decrease
             }
+        
+        // Handle collision with green wheel segment
         case .green:
             if(theball.color == GameConstants.GREEN_CONST)
             {
-                runFadeAnimation(on: lightUpGreen)
-                colorsMatch(theball: theball, index: i)
+                // Ball color matches wheel segment - trigger success effects
+                runFadeAnimation(on: lightUpGreen)  // Light up green segment
+                colorsMatch(theball: theball, index: i)  // Handle successful match
                 return true
             }
             else{
-                
-                runBlackOutAnimation(on: backgroundBlackOut)
-                //  decreaseScore()
-                
+                // Ball color doesn't match green wheel segment - trigger failure effects
+                runBlackOutAnimation(on: backgroundBlackOut)  // Flash screen black
+                //  decreaseScore()  // TODO: Implement score decrease
             }
+        
+        // Handle collision with aqua wheel segment
         case .aqua:
             if(theball.color == GameConstants.AQUA_CONST)
             {
-                runFadeAnimation(on: lightUpAqua)
-                colorsMatch(theball: theball, index: i)
+                // Ball color matches wheel segment - trigger success effects
+                runFadeAnimation(on: lightUpAqua)  // Light up aqua segment
+                colorsMatch(theball: theball, index: i)  // Handle successful match
                 return true
             }
             else{
-                
-                runBlackOutAnimation(on: backgroundBlackOut)
-                //  decreaseScore()
-                
+                // Ball color doesn't match aqua wheel segment - trigger failure effects
+                runBlackOutAnimation(on: backgroundBlackOut)  // Flash screen black
+                //  decreaseScore()  // TODO: Implement score decrease
             }
+        
+        // Handle collision with purple wheel segment
         case .purple:
             if(theball.color == GameConstants.PURPLE_CONST)
             {
-                runFadeAnimation(on: lightUpPurple)
-                colorsMatch(theball: theball, index: i)
+                // Ball color matches wheel segment - trigger success effects
+                runFadeAnimation(on: lightUpPurple)  // Light up purple segment
+                colorsMatch(theball: theball, index: i)  // Handle successful match
                 return true
             }
             else{
-                
-                runBlackOutAnimation(on: backgroundBlackOut)
-                //  decreaseScore()
-                
+                // Ball color doesn't match purple wheel segment - trigger failure effects
+                runBlackOutAnimation(on: backgroundBlackOut)  // Flash screen black
+                //  decreaseScore()  // TODO: Implement score decrease
             }
+        
+        // Handle collision with dark space segments (barrier/empty areas)
         case .dark_space_1:
-            runBlackOutAnimation(on: backgroundBlackOut)
+            runBlackOutAnimation(on: backgroundBlackOut)  // Always failure - no ball can match dark space
         case .dark_space_2:
-            runBlackOutAnimation(on: backgroundBlackOut)
+            runBlackOutAnimation(on: backgroundBlackOut)  // Always failure - no ball can match dark space
         case .dark_space_3:
-            runBlackOutAnimation(on: backgroundBlackOut)
+            runBlackOutAnimation(on: backgroundBlackOut)  // Always failure - no ball can match dark space
+        
+        // Handle unknown or unsupported ball colors
         default:
-            break
+            break  // No action taken for unhandled cases
             
         }
         
-        return false
+        return false  // Default return for unsuccessful collisions
     }
     
+    /**
+     * Handles collision detection between a ball and wheel segments based on wheel type
+     * @param theball: The ball object to check for collision
+     * @param i: Index parameter (likely for ball position or iteration)
+     * @return: Boolean indicating whether a collision occurred
+     */
     func handleCollision(theball: Ball, i: Int) -> Bool
     {
+        // Get the current wheel type configuration from utility singleton
         switch Utility.shared.getWheelType()
         {
+            // Handle 4-color wheel (Yellow, Green, Red, Blue)
         case Sphere.WHEEL_TYPE_YELLOW_GREEN_RED_BLUE:
+            // Find the closest color segment by minimum distance
             switch distancesYellowGreenRedBlue.min(by: { $0.value < $1.value })?.color
             {
-                case .red:
-                    return determineCollision(theball: theball, i: i, ballcolor: .red)
-                case .yellow:
-                    return determineCollision(theball: theball, i: i, ballcolor: .yellow)
-                case .green:
-                    return determineCollision(theball: theball, i: i, ballcolor: .green)
-                case .blue:
-                    return determineCollision(theball: theball, i: i, ballcolor: .blue)
-                default:
-                    return false
+            case .red:
+                return determineCollision(theball: theball, i: i, ballcolor: .red)
+            case .yellow:
+                return determineCollision(theball: theball, i: i, ballcolor: .yellow)
+            case .green:
+                return determineCollision(theball: theball, i: i, ballcolor: .green)
+            case .blue:
+                return determineCollision(theball: theball, i: i, ballcolor: .blue)
+            default:
+                return false // No valid color found
             }
+            
+            // Handle 6-color wheel (Aqua, Purple, Yellow, Green, Red, Blue)
         case Sphere.WHEEL_TYPE_AQUA_PURPLE_YELLOW_GREEN_RED_BLUE:
+            // Find the closest color segment by minimum distance
             switch distancesAquaPurpleYellowGreenRedBlue.min(by: { $0.value < $1.value })?.color
             {
-                case .red:
-                    return determineCollision(theball: theball, i: i, ballcolor: .red)
-                case .yellow:
-                    return determineCollision(theball: theball, i: i, ballcolor: .yellow)
-                case .green:
-                    return determineCollision(theball: theball, i: i, ballcolor: .green)
-                case .blue:
-                    return determineCollision(theball: theball, i: i, ballcolor: .blue)
-                case .purple:
-                    return determineCollision(theball: theball, i: i, ballcolor: .purple)
-                case .aqua:
-                    return determineCollision(theball: theball, i: i, ballcolor: .aqua)
-                default:
-                    return false
+            case .red:
+                return determineCollision(theball: theball, i: i, ballcolor: .red)
+            case .yellow:
+                return determineCollision(theball: theball, i: i, ballcolor: .yellow)
+            case .green:
+                return determineCollision(theball: theball, i: i, ballcolor: .green)
+            case .blue:
+                return determineCollision(theball: theball, i: i, ballcolor: .blue)
+            case .purple:
+                return determineCollision(theball: theball, i: i, ballcolor: .purple)
+            case .aqua:
+                return determineCollision(theball: theball, i: i, ballcolor: .aqua)
+            default:
+                return false // No valid color found
             }
+            
+            // Handle 3-color wheel with dark spaces (Green, Red, Blue + dark spaces)
         case Sphere.WHEEL_TYPE_GREEN_RED_BLUE:
+            // Find the closest segment (color or dark space) by minimum distance
             switch distancesGreenRedBlue.min(by: { $0.value < $1.value })?.color
             {
-                case .red:
-                    return determineCollision(theball: theball, i: i, ballcolor: .red)
-                case .green:
-                    return determineCollision(theball: theball, i: i, ballcolor: .green)
-                case .blue:
-                    return determineCollision(theball: theball, i: i, ballcolor: .blue)
-                case .dark_space_1:
-                    return determineCollision(theball: theball, i: i, ballcolor: .dark_space_1)
-                case .dark_space_2:
-                    return determineCollision(theball: theball, i: i, ballcolor: .dark_space_2)
-                case .dark_space_3:
-                    return determineCollision(theball: theball, i: i, ballcolor: .dark_space_3)
-                default:
-                    return false
+            case .red:
+                return determineCollision(theball: theball, i: i, ballcolor: .red)
+            case .green:
+                return determineCollision(theball: theball, i: i, ballcolor: .green)
+            case .blue:
+                return determineCollision(theball: theball, i: i, ballcolor: .blue)
+                // Handle dark space segments (likely empty/barrier segments)
+            case .dark_space_1:
+                return determineCollision(theball: theball, i: i, ballcolor: .dark_space_1)
+            case .dark_space_2:
+                return determineCollision(theball: theball, i: i, ballcolor: .dark_space_2)
+            case .dark_space_3:
+                return determineCollision(theball: theball, i: i, ballcolor: .dark_space_3)
+            default:
+                return false // No valid segment found
             }
             
+            // Handle 2-color wheel (Red, Blue only)
         case Sphere.WHEEL_TYPE_RED_BLUE:
+            // Note: Uses distancesGreenRedBlue array but only checks red/blue cases
             switch distancesGreenRedBlue.min(by: { $0.value < $1.value })?.color
             {
-                case .blue:
-                    return determineCollision(theball: theball, i: i, ballcolor: .blue)
-                case .red:
-                    return determineCollision(theball: theball, i: i, ballcolor: .red)
-                default:
-                    return false
+            case .blue:
+                return determineCollision(theball: theball, i: i, ballcolor: .blue)
+            case .red:
+                return determineCollision(theball: theball, i: i, ballcolor: .red)
+            default:
+                return false // No valid color found
             }
-        default:
-            break
-       
-        }
             
-        return false
-    }
+            // Handle unknown or unsupported wheel types
+        default:
+            break // Fall through to return false
+            
+        }
+                
+            return false // Default return for unhandled cases
+        }
     
     func submitScoreFunction() async {
         await gameCenterManager.submitScore(Utility.shared.getTotalBalls())
     }
     
-    func doGameOver()
-    {
+    // Handles the game over sequence, including animations and level progression
+    func doGameOver() {
+        // Trigger the game over animation on the gameOver node
         runGameOverAnimation(on: gameOver)
+        
+        // Display the next level information to the user
         displayNextLevel()
+        
+        // Increment the current level using the shared utility
         Utility.shared.incrementLevel()
+        
+        // Set the levelOver flag to true, indicating the level has ended
         levelOver = true
+        
+        // Update level-specific parameters for the next level
         Utility.shared.setLevelParameters()
-        //centerWheel.alpha = 0.5
+        
+        // Note: Commented out code to adjust centerWheel transparency
+        // centerWheel.alpha = 0.5
+        
+        // Asynchronously submit the player's score
         Task {
-                await submitScoreFunction()
-            }
-       
-        // Optional: Add animation for smoother transition
-            let fadeAction = SKAction.fadeAlpha(to: 0.3, duration: 1.5)
-            backgroundNode.run(fadeAction)
-        //ringGlowInner.removeAllActions()
-        //ringGlowOuter.removeAllActions()
+            await submitScoreFunction()
+        }
+        
+        // Apply a fade animation to the background node for a smoother transition
+        let fadeAction = SKAction.fadeAlpha(to: 0.3, duration: 1.5)
+        backgroundNode.run(fadeAction)
+        
+        // Note: Commented out code to stop animations on ring glow nodes
+        // ringGlowInner.removeAllActions()
+        // ringGlowOuter.removeAllActions()
     }
     
+    /**
+     * Main game loop called every frame
+     * Handles wheel rotation, ball physics, collision detection, and game state management
+     */
     override func update(_ currentTime: CFTimeInterval) {
         
+        // Handle wheel rotation direction based on game state flags
         if(GameConstants.goingBackwardBlocker)
         {
-            setAngleGoingForward()
-            setRotation()
+            setAngleGoingForward()    // Set wheel to rotate forward
+            setRotation()             // Apply the rotation
         }
         else if(GameConstants.goingForwardBlocker)
         {
-            setAngleGoingBackward()
-            setRotation()
-            
+            setAngleGoingBackward()   // Set wheel to rotate backward
+            setRotation()             // Apply the rotation
         }
-        var useAccelX: Bool = true
-        var useAccelY: Bool = true
+        
+        // Initialize accelerometer usage flags for this frame
+        var useAccelX: Bool = false
+        var useAccelY: Bool = false
+        
+        // Only process game logic if the level is still active
         if(!levelOver)
         {
+            // Update game timer if countdown has finished
             if(countdownComplete)
             {
                 updateTimeTotal(currentTime: currentTime)
             }
+            
+            // Check for game over condition
             if(gameOverFlag)
             {
                 doGameOver()
-                
             }
+            // Process ball physics and collisions only after countdown is complete
             else if(countdownComplete)
             {
+                // Iterate through all balls in the game
                 for i in 0..<ballsArray.count {
                     let theball = ballsArray[i]
                     
-                    let otherCenter = theball.sphereBall.position // Replace with other sprite's position
+                    // Get ball's current position and radius for collision calculations
+                    let otherCenter = theball.sphereBall.position
                     let otherRadius = theball.sphereBall.size.width / 2
                     
-                    
-                    // Calculate the center of the other circle
+                    // Create CGPoint representations of ball and wheel centers
+                    // Note: otherCircleCenter is redundant with otherCenter
                     let otherCircleCenter = CGPoint(x: theball.sphereBall.position.x, y: theball.sphereBall.position.y)
                     let centerWheelPoint = CGPoint(x: centerWheel.position.x, y: centerWheel.position.y)
                     
+                    // Calculate distance between ball and center wheel
                     let distance = distanceBetweenTwoPoints(startPoint: otherCircleCenter, endPoint: centerWheelPoint)
                     
+                    // Only process collision detection if ball is close enough to the center wheel
                     if(distance < GameConstants.distanceFromBallToCenter)
                     {
+                        // Update wheel segments based on current wheel configuration
                         setColorSegmentsRadians(wheelType: Utility.shared.getWheelType())
-                        
                         setPointsSegments(wheelType: Utility.shared.getWheelType())
                         
+                        // Update distance calculations for collision detection
                         setDistance(otherCenter)
-                        
                         setdistancesArray()
                         
+                        // Check if ball is actually colliding with the wheel
                         if circlesCollide(
                             center1: wheelCenter, radius1: wheelRadius,
                             center2: otherCenter, radius2: otherRadius
                         ) {
                             
+                            // Handle collision (scoring, ball removal, etc.)
+                            // If handleCollision returns true, break out of loop (likely ball was removed)
                             if handleCollision(theball: theball, i:i)
                             {
                                 break;
                             }
-                            //
+                            
+                            // Reverse ball velocity for bounce effect
                             theball.projX = -theball.projX
                             theball.projY = -theball.projY
+                            
+                            // Disable accelerometer input to prevent interference during collision
                             useAccelX = false
                             useAccelY = false
-                            
                         }
                     }
+                    
+                    // Update ball position based on velocity and accelerometer input
                     updateBallPosition(theball: theball, useAccelX:useAccelX, useAccelY: useAccelY)
                 }
             }
@@ -1477,6 +1638,8 @@ class GameScene: SKScene{
     
         
     }
+    
+    
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
@@ -1630,8 +1793,7 @@ class GameScene: SKScene{
             }
             determineSphereParticleColor(ball: ball, emitter: emitter)
             determineBallParticlePosition(ball: ball)
-            
-            
+
         }
     }
         
@@ -1696,50 +1858,68 @@ class GameScene: SKScene{
             addChild(ball.particle)
         }
         
-        func determineSphereParticleColor(ball: Ball, emitter: SKEmitterNode)
-        {
-            switch ball.color{
-            case GameConstants.BLUE_CONST:
-                ball.sphereBall = SKSpriteNode(imageNamed: "ball_blue")
-                ball.particle = emitter
-                ball.particle.particleColor = .blue
-                ball.particle.particleColorBlendFactor = 1.0
-                            ball.particle.particleColorSequence = nil
-            case GameConstants.RED_CONST:
-                ball.sphereBall = SKSpriteNode(imageNamed: "ball_red")
-                ball.particle = emitter
-                ball.particle.particleColor = .red
-                ball.particle.particleColorBlendFactor = 1.0
-                            ball.particle.particleColorSequence = nil
-            case GameConstants.YELLOW_CONST:
-                ball.sphereBall = SKSpriteNode(imageNamed: "ball_yellow")
-                ball.particle = emitter
-                ball.particle.particleColor = .yellow
-                ball.particle.particleColorBlendFactor = 1.0
-                            ball.particle.particleColorSequence = nil
-            case GameConstants.GREEN_CONST:
-                ball.sphereBall = SKSpriteNode(imageNamed: "ball_green")
-                ball.particle = emitter
-                ball.particle.particleColor = .green
-                ball.particle.particleColorBlendFactor = 1.0
-                            ball.particle.particleColorSequence = nil
-            case GameConstants.AQUA_CONST:
-                ball.sphereBall = SKSpriteNode(imageNamed: "ball_aqua")
-                ball.particle = emitter
-                ball.particle.particleColor = .systemBlue
-                ball.particle.particleColorBlendFactor = 1.0
-                            ball.particle.particleColorSequence = nil
-            case GameConstants.PURPLE_CONST:
-                ball.sphereBall = SKSpriteNode(imageNamed: "ball_purple")
-                ball.particle = emitter
-                ball.particle.particleColor = .purple
-                ball.particle.particleColorBlendFactor = 1.0
-                            ball.particle.particleColorSequence = nil
-            default:
-                break
-            
-            }
-           
+    /**
+     * Sets up the visual appearance of a ball based on its color
+     * Configures both the sprite image and particle effects for the ball
+     * @param ball: The ball object to configure
+     * @param emitter: The particle emitter node to attach to the ball
+     */
+    func determineSphereParticleColor(ball: Ball, emitter: SKEmitterNode)
+    {
+        switch ball.color{
+        // Configure blue ball appearance
+        case GameConstants.BLUE_CONST:
+            ball.sphereBall = SKSpriteNode(imageNamed: "ball_blue")  // Set blue ball sprite
+            ball.particle = emitter  // Attach particle emitter to ball
+            ball.particle.particleColor = .blue  // Set particle color to blue
+            ball.particle.particleColorBlendFactor = 1.0  // Full color blending
+            ball.particle.particleColorSequence = nil  // Disable color sequence animation
         
+        // Configure red ball appearance
+        case GameConstants.RED_CONST:
+            ball.sphereBall = SKSpriteNode(imageNamed: "ball_red")  // Set red ball sprite
+            ball.particle = emitter  // Attach particle emitter to ball
+            ball.particle.particleColor = .red  // Set particle color to red
+            ball.particle.particleColorBlendFactor = 1.0  // Full color blending
+            ball.particle.particleColorSequence = nil  // Disable color sequence animation
+        
+        // Configure yellow ball appearance
+        case GameConstants.YELLOW_CONST:
+            ball.sphereBall = SKSpriteNode(imageNamed: "ball_yellow")  // Set yellow ball sprite
+            ball.particle = emitter  // Attach particle emitter to ball
+            ball.particle.particleColor = .yellow  // Set particle color to yellow
+            ball.particle.particleColorBlendFactor = 1.0  // Full color blending
+            ball.particle.particleColorSequence = nil  // Disable color sequence animation
+        
+        // Configure green ball appearance
+        case GameConstants.GREEN_CONST:
+            ball.sphereBall = SKSpriteNode(imageNamed: "ball_green")  // Set green ball sprite
+            ball.particle = emitter  // Attach particle emitter to ball
+            ball.particle.particleColor = .green  // Set particle color to green
+            ball.particle.particleColorBlendFactor = 1.0  // Full color blending
+            ball.particle.particleColorSequence = nil  // Disable color sequence animation
+        
+        // Configure aqua ball appearance
+        case GameConstants.AQUA_CONST:
+            ball.sphereBall = SKSpriteNode(imageNamed: "ball_aqua")  // Set aqua ball sprite
+            ball.particle = emitter  // Attach particle emitter to ball
+            ball.particle.particleColor = .systemBlue  // Set particle color to system blue (closest to aqua)
+            ball.particle.particleColorBlendFactor = 1.0  // Full color blending
+            ball.particle.particleColorSequence = nil  // Disable color sequence animation
+        
+        // Configure purple ball appearance
+        case GameConstants.PURPLE_CONST:
+            ball.sphereBall = SKSpriteNode(imageNamed: "ball_purple")  // Set purple ball sprite
+            ball.particle = emitter  // Attach particle emitter to ball
+            ball.particle.particleColor = .purple  // Set particle color to purple
+            ball.particle.particleColorBlendFactor = 1.0  // Full color blending
+            ball.particle.particleColorSequence = nil  // Disable color sequence animation
+        
+        // Handle unknown or unsupported ball colors
+        default:
+            break  // No configuration for unhandled colors
+        
+        }
+       
     }
 }
